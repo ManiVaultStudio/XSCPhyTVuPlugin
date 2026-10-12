@@ -567,7 +567,7 @@ void XSCPhyTVuPlugin::removeSelectionFromScatterplot(std::string clusterName)
 
     if (_chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().getNumberOfOptions() > 0)
     {
-        qDebug() << "XSCPhyTVuPlugin:Clearing Species Explorer selection at line 571";
+        //qDebug() << "XSCPhyTVuPlugin:Clearing Species Explorer selection at line 571";
         _chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().setSelectedOptions(listofLeaves);
     }
 
@@ -583,7 +583,7 @@ void XSCPhyTVuPlugin::addSelectionToScatterplot(std::string clusterName)
     }
     if (_chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().getNumberOfOptions() > 0)
     {
-        qDebug() << "XSCPhyTVuPlugin:Clearing Species Explorer selection at line 587";
+        //qDebug() << "XSCPhyTVuPlugin:Clearing Species Explorer selection at line 587";
         _chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().setSelectedOptions(listofLeaves);
     }
     
