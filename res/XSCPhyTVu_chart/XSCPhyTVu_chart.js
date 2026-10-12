@@ -454,14 +454,41 @@ function initiateChart(d) {
 
         }
 
-            drawChart();
+            // New data for the SAME view (e.g. another gene was clicked in the gene table): keep the species selection that
+            // the linked species explorer pushed into the tree. Wiping it here made the view report an empty selection back
+            // to Qt, which cleared the explorer selection of the gene identification view.
+            drawChart(true);
 
     }
 
     
 }
-function drawChart() {
-    speciesSelected = [];
+
+/** Names of all leaves (species) of a tree. */
+function collectLeafNames(node, names) {
+    if (!node) {
+        return names;
+    }
+    if (node.children && node.children.length > 0) {
+        node.children.forEach(function (child) { collectLeafNames(child, names); });
+    } else if (node.name !== undefined) {
+        names.push(node.name);
+    }
+    return names;
+}
+
+/**
+ * (Re)draw the chart.
+ * @param keepSelection true when only the data changed: the current species selection is kept (restricted to species that
+ *                      still exist in the tree) and the redraw is NOT reported back to Qt as a selection change.
+ */
+function drawChart(keepSelection) {
+    if (keepSelection) {
+        var leafNames = collectLeafNames(dataReference, []);
+        speciesSelected = (speciesSelected || []).filter(function (name) { return leafNames.indexOf(name) !== -1; });
+    } else {
+        speciesSelected = [];
+    }
     legendTextContainer = [];
     legendTextContainerActivateFlag = false;
     speciesArray = [];
@@ -507,9 +534,17 @@ function drawChart() {
         // Step 3: Calculate min and max scores
         mindistanceColor = d3.min(allScores);
         maxdistanceColor = d3.max(allScores);
-        speciesSelected = [];
+        if (!keepSelection) {
+            speciesSelected = [];
+        }
         if (dataReference != "") {
+            // a pure data refresh must not echo the selection (or its absence) back to Qt
+            var previousPause = pauseSpeciesSelection;
+            if (keepSelection) {
+                pauseSpeciesSelection = true;
+            }
             generateVis();
+            pauseSpeciesSelection = previousPause;
         }
     }
 }

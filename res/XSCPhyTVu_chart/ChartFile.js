@@ -1110,7 +1110,7 @@ L ${d.y} ${d.x}`;
                     }
                 }
             } else {
-                if (!isDebug) {
+                if (!isDebug && !pauseSpeciesSelection) { // no "empty selection" report while only redrawing
                     passRemoveSelectionToQt("");
                 } else {
                     //console.log("passRemoveSelectionToQt('')");
@@ -1238,7 +1238,7 @@ L ${d.y} ${d.x}`;
                 }
             }
         } else {
-            if (!isDebug) {
+            if (!isDebug && !pauseSpeciesSelection) { // no "empty selection" report while only redrawing
                 passRemoveSelectionToQt("");
             } else {
                 //console.log("passRemoveSelectionToQt('')");
@@ -1645,7 +1645,7 @@ document.addEventListener("keydown", function (event) {
         //}
         //}
 
-        if (!isDebug) {
+        if (!isDebug && !pauseSpeciesSelection) { // no "empty selection" report while only redrawing
             passRemoveSelectionToQt("");
         } else {
             //console.log("passRemoveSelectionToQt('')");
