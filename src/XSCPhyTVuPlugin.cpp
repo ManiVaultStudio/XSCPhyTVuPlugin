@@ -28,7 +28,7 @@ XSCPhyTVuPlugin::XSCPhyTVuPlugin(const PluginFactory* factory) :
     //_toolbarAction.addAction(&_chartOptions.getLinkerSettingsHolder(), 4, GroupAction::Horizontal);
 
 
-    
+
 }
 
 void XSCPhyTVuPlugin::init()
@@ -37,7 +37,7 @@ void XSCPhyTVuPlugin::init()
 
     shortcuts.add({ QKeySequence(Qt::SHIFT), "Leaf Multi-Selection", "Mouse left click on tree nodes" });
     shortcuts.add({ QKeySequence(Qt::Key_Escape), "Deselect", "Remove all leaf selection" });
-    shortcuts.add({ QKeySequence(Qt::MouseButton::LeftButton), "Leaf Single-Selection", "Mouse left click on tree nodes"});
+    shortcuts.add({ QKeySequence(Qt::MouseButton::LeftButton), "Leaf Single-Selection", "Mouse left click on tree nodes" });
     shortcuts.add({ QKeySequence(Qt::MouseButton::LeftButton), "Toggle Attribute", "Mouse left click on colormap to toggle attributes" });
     shortcuts.add({ QKeySequence(Qt::MouseButton::LeftButton), "Node Info", "Hover node to see children names" });
     shortcuts.add({ QKeySequence(Qt::MouseButton::LeftButton), "Leaf Info", "Hover leaf to see leaf details" });
@@ -70,8 +70,8 @@ void XSCPhyTVuPlugin::init()
             else
             {
                 _chartWidget.setAcceptDrops(true);
-               if(!_referenceTree.isValid())
-                _dropWidget->setShowDropIndicator(true);
+                if (!_referenceTree.isValid())
+                    _dropWidget->setShowDropIndicator(true);
             }
         };
     connect(&_chartOptions.getExtraSettingsHolder().getDisableAcceptDatasetDrops(), &ToggleAction::toggled, this, disableAcceptDrops);
@@ -89,7 +89,7 @@ void XSCPhyTVuPlugin::init()
     connect(&_chartWidget, &ChartWidget::alterColorMirrorForRankToQt, this, &XSCPhyTVuPlugin::alterColorMirrorForRank);
 
     connect(&_chartWidget, &ChartWidget::alterColorMapToQt, this, &XSCPhyTVuPlugin::alterColorMap);
-    
+
     const auto updateTreeLeafSelectionFromQT = [this]() -> void
         {
 
@@ -149,10 +149,10 @@ void XSCPhyTVuPlugin::init()
         Dataset<XSCTreeMeta> candidateMetadataDataset;
         Dataset<XSCTree> candidateTreeDataset;
         QStringList leaves;
-        if (dataType== XSCTreeType)
+        if (dataType == XSCTreeType)
         {
             candidateTreeDataset = mv::data().getDataset<XSCTree>(datasetId);
-            leaves = candidateTreeDataset->getTreeLeafNames();
+            if (candidateTreeDataset.isValid()) { leaves = candidateTreeDataset->getTreeLeafNames(); }
 
             {
                 if (!_referenceTree.isValid())
@@ -163,7 +163,7 @@ void XSCPhyTVuPlugin::init()
                         dropRegions << new DropWidget::DropRegion(this, "Reference XSCTree", QString("Load %1 into cross-species comparison view").arg(datasetGuiName), "project-diagram", true, [this, candidateTreeDataset]() {
                             _referenceTree = candidateTreeDataset;
 
-                            if ( _referenceTree.isValid())
+                            if (_referenceTree.isValid())
                             {
                                 triggerChartJS();
                             }
@@ -188,7 +188,7 @@ void XSCPhyTVuPlugin::init()
                         dropRegions << new DropWidget::DropRegion(this, "Reference XSCTree", QString("Compare %1 tree ").arg(datasetGuiName), "project-diagram", true, [this, candidateTreeDataset]() {
                             _referenceTree = candidateTreeDataset;
 
-                            if ( _referenceTree.isValid())
+                            if (_referenceTree.isValid())
                             {
                                 triggerChartJS();
                             }
@@ -200,12 +200,14 @@ void XSCPhyTVuPlugin::init()
 
             }
         }
-        else if (dataType== XSCTreeMetaType)
+        else if (dataType == XSCTreeMetaType)
         {
             candidateMetadataDataset = mv::data().getDataset<XSCTreeMeta>(datasetId);
 
-            leaves = candidateMetadataDataset->getTreeMetaLeafNames();
-            auto comparisonDatasetDimensions = _referenceTree->getTreeLeafNames();
+            if (candidateMetadataDataset.isValid()) { leaves = candidateMetadataDataset->getTreeMetaLeafNames(); }
+            // (the reference tree may not be loaded yet: dereferencing it before the validity check below crashed)
+            QStringList comparisonDatasetDimensions;
+            if (_referenceTree.isValid()) { comparisonDatasetDimensions = _referenceTree->getTreeLeafNames(); }
             if (_referenceTree.isValid())
             {
                 /* TODO: MEtadata */
@@ -216,21 +218,21 @@ void XSCPhyTVuPlugin::init()
                     // Check if the lists are equal
                     if (leaves == comparisonDatasetDimensions)
                     {
-              
 
 
-                            if (_metaInfo == candidateMetadataDataset)
-                            {
-                                // Dataset cannot be dropped because it is already loaded
-                                dropRegions << new DropWidget::DropRegion(this, "Meta data Warning", "Data already loaded", "exclamation-circle", false);
-                            }
-                            else
-                            {
-                                // The number of points is equal, so offer the option to use the points dataset as source for points opacity
-                                dropRegions << new DropWidget::DropRegion(this, "Meta data", QString("Set %1 metadata ").arg(datasetGuiName), "table", true, [this, candidateMetadataDataset]() {
-                                    _metaInfo = candidateMetadataDataset;
-                                    });
-                            }
+
+                        if (_metaInfo == candidateMetadataDataset)
+                        {
+                            // Dataset cannot be dropped because it is already loaded
+                            dropRegions << new DropWidget::DropRegion(this, "Meta data Warning", "Data already loaded", "exclamation-circle", false);
+                        }
+                        else
+                        {
+                            // The number of points is equal, so offer the option to use the points dataset as source for points opacity
+                            dropRegions << new DropWidget::DropRegion(this, "Meta data", QString("Set %1 metadata ").arg(datasetGuiName), "table", true, [this, candidateMetadataDataset]() {
+                                _metaInfo = candidateMetadataDataset;
+                                });
+                        }
 
                     }
                     else
@@ -286,7 +288,7 @@ void XSCPhyTVuPlugin::init()
 }
 void XSCPhyTVuPlugin::triggerInitialChart()
 {
-    if(_chartOptions.getMainSettingsHolder().getMainReferenceTreeSelectionAction().getCurrentText() != "")
+    if (_chartOptions.getMainSettingsHolder().getMainReferenceTreeSelectionAction().getCurrentText() != "")
     {
 
         Dataset<XSCTree> tempRefTree;
@@ -310,12 +312,12 @@ void XSCPhyTVuPlugin::triggerChartJS()
 {
     _dropWidget->setShowDropIndicator(false);
 
-    if (_chartOptions.getMainSettingsHolder().getMainReferenceTreeSelectionAction().getCurrentDataset()!= _referenceTree)
+    if (_chartOptions.getMainSettingsHolder().getMainReferenceTreeSelectionAction().getCurrentDataset() != _referenceTree)
     {
         _chartOptions.getMainSettingsHolder().getMainReferenceTreeSelectionAction().setCurrentDataset(_referenceTree);
     }
 
-   
+
 
     if (_chartOptions.getMainSettingsHolder().getMainReferenceTreeSelectionAction().getCurrentText() != "")
     {
@@ -370,12 +372,12 @@ void XSCPhyTVuPlugin::loadData(const Dataset<XSCTree>& dataset)
 
 
 
-    if(_referenceTree != dataset)
+    if (_referenceTree != dataset)
     {
         _referenceTree = dataset;
     }
 
-    if( _referenceTree.isValid() )
+    if (_referenceTree.isValid())
     {
         triggerChartJS();
     }
@@ -567,7 +569,6 @@ void XSCPhyTVuPlugin::removeSelectionFromScatterplot(std::string clusterName)
 
     if (_chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().getNumberOfOptions() > 0)
     {
-        //qDebug() << "XSCPhyTVuPlugin:Clearing Species Explorer selection at line 571";
         _chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().setSelectedOptions(listofLeaves);
     }
 
@@ -583,10 +584,9 @@ void XSCPhyTVuPlugin::addSelectionToScatterplot(std::string clusterName)
     }
     if (_chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().getNumberOfOptions() > 0)
     {
-        //qDebug() << "XSCPhyTVuPlugin:Clearing Species Explorer selection at line 587";
         _chartOptions.getLinkerSettingsHolder().getSelectedLeafValues().setSelectedOptions(listofLeaves);
     }
-    
+
 }
 void XSCPhyTVuPlugin::addLeftRightSelectionToScatterplot(std::string clusterName)
 {
@@ -600,7 +600,7 @@ void XSCPhyTVuPlugin::passScatterplotLeafPointSelection(std::string selectedSpec
 void XSCPhyTVuPlugin::alterColorMirrorForRank(std::string selectedSpecies)
 {
     auto& mirrorAction = _chartOptions.getExtraSettingsHolder().getColorMapAction().getMirrorAction(ColorMapAction::Axis::X);
-    if (selectedSpecies=="T")
+    if (selectedSpecies == "T")
     {
         mirrorAction.setChecked(true);
     }
@@ -608,12 +608,12 @@ void XSCPhyTVuPlugin::alterColorMirrorForRank(std::string selectedSpecies)
     {
         mirrorAction.setChecked(false);
     }
-    
+
 }
 
 void XSCPhyTVuPlugin::alterColorMap(std::string selectedSpecies)
 {
-    if (selectedSpecies!="")
+    if (selectedSpecies != "")
     {
         _chartOptions.getExtraSettingsHolder().getColorMapAction().setColorMap(QString::fromStdString(selectedSpecies));
     }
