@@ -55,6 +55,7 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().setSerializationName("CSCPTV:Tree Leaf Selection Value");
     _linkerSettingsHolder.getSelectedLeafValues().setSerializationName("CSCPTV:Selected Leaf Values");
     _linkerSettingsHolder.getLeafDatasetPicker().setSerializationName("CSCPTV:Leaf Dataset Picker");
+    _updateSettingsHolder.getReverseSearchTraitSelection().setSerializationName("CSCPTV:Reverse Search Trait Selection");
 
     _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetAdded));
     _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DatasetRemoved));
@@ -117,12 +118,17 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     _updateSettingsHolder.getRevertButtonAction().setDefaultWidgetFlags(TriggerAction::IconText);
     _extraSettingsHolder.getExportTreeDataAction().setDefaultWidgetFlags(TriggerAction::IconText);
     _extraSettingsHolder.getExportTreeDataAction().setIcon(mv::util::StyledIcon("save"));
+    _updateSettingsHolder.getReverseSearchTraitSelection().setDefaultWidgetFlags(OptionAction::ComboBox);
+
 
     QIcon exploreIcon = mv::util::StyledIcon("wpexplorer");
     _updateSettingsHolder.getUpdateViewsButtonAction().setIcon(exploreIcon);
 
     QIcon revertIcon = mv::util::StyledIcon("history");
     _updateSettingsHolder.getRevertButtonAction().setIcon(revertIcon);
+
+    _updateSettingsHolder.getReverseSearchTraitSelection().setIcon(mv::util::StyledIcon("search"));
+
 
 
     const auto leafDatasetSelection = [this]() -> void
@@ -211,6 +217,31 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
             _viewerPlugin.getChartWidget().setLeafSelectionFromQT(selectionString);
         };
     connect(&_updateSettingsHolder.getRevertButtonAction(), &TriggerAction::triggered, this, revertButtomUpdate);
+
+
+    connect(&_updateSettingsHolder.getReverseSearchTraitSelection(), &OptionAction::currentIndexChanged, this, [this]() {
+        QString selectedOption = _updateSettingsHolder.getReverseSearchTraitSelection().getCurrentText();
+
+        auto scatterplotViewFactory = mv::plugins().getPluginFactory("XSCGeneDetect");
+        if (scatterplotViewFactory) {
+            for (auto plugin : mv::plugins().getPluginsByFactory(scatterplotViewFactory)) {
+                if (plugin->getGuiName() == "Gene Identification View") {
+                    mv::gui::StringAction* traitStringAction = findActionByPath<StringAction>(plugin, "XSCGeneDetectPlugin Settings/Reverse Search Trait Selection String");
+                    if (traitStringAction) {
+                        traitStringAction->setString(selectedOption);
+                    }
+                    else {
+                        qWarning() << "Trait String Action not found in Gene Identification View";
+                    }
+                }
+                else {
+                    qWarning() << "Gene Identification View not found";
+                }
+
+            }
+        }
+        });
+
 
 
     const auto exportTreeDataTrigger = [this]() -> void
@@ -732,6 +763,7 @@ void ChartOptions::traitDatasetModify()
                     _metaDataSettingsHolder.getStringTraitAction().setOptions(propertyOptionsString);
                     _metaDataSettingsHolder.getColorTraitAction().setOptions(propertyOptionsColor);
                     _metaDataSettingsHolder.getNumericTraitAction().setOptions(propertyOptionsNumeric);
+                    _updateSettingsHolder.getReverseSearchTraitSelection().setOptions(propertyOptionsNumeric);
                     if (traitSelectedColor != "")
                     {
                         if (propertyOptionsColor.contains(traitSelectedColor))
@@ -978,8 +1010,8 @@ inline ChartOptions::UpdateSettingsHolder::UpdateSettingsHolder(ChartOptions& ch
     _chartOptions(chartOptions),
 
     _updateViewsButton(this, "Explore"),
-    _revertButton(this, "Revert")
-
+    _revertButton(this, "Revert"),
+    _reverseSearchTraitSelection(this, "Trait")
 
 {
     setText("Update Options");
@@ -987,6 +1019,7 @@ inline ChartOptions::UpdateSettingsHolder::UpdateSettingsHolder(ChartOptions& ch
     setPopupSizeHint(QSize(350, 0));
     addAction(&_updateViewsButton);
     addAction(&_revertButton);
+    addAction(&_reverseSearchTraitSelection);
 
 }
 
@@ -1007,6 +1040,7 @@ void ChartOptions::fromVariantMap(const QVariantMap& variantMap)
     _extraSettingsHolder.getDisableAcceptDatasetDrops().fromParentVariantMap(variantMap);
     _updateSettingsHolder.getUpdateViewsButtonAction().fromParentVariantMap(variantMap);
     _updateSettingsHolder.getRevertButtonAction().fromParentVariantMap(variantMap);
+    _updateSettingsHolder.getReverseSearchTraitSelection().fromParentVariantMap(variantMap);
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().fromParentVariantMap(variantMap);
 
 }
@@ -1027,6 +1061,7 @@ QVariantMap ChartOptions::toVariantMap() const
     _extraSettingsHolder.getDisableAcceptDatasetDrops().insertIntoVariantMap(variantMap);
     _updateSettingsHolder.getUpdateViewsButtonAction().insertIntoVariantMap(variantMap);
     _updateSettingsHolder.getRevertButtonAction().insertIntoVariantMap(variantMap);
+    _updateSettingsHolder.getReverseSearchTraitSelection().insertIntoVariantMap(variantMap);
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().insertIntoVariantMap(variantMap);
     return variantMap;
 }

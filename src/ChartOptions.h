@@ -43,7 +43,10 @@ namespace mv
 {
     class CoreInterface;
 }
-
+template<typename ActionType>
+ActionType* findActionByPath(mv::plugin::Plugin* plugin, const QString& path) {
+    return dynamic_cast<ActionType*>(plugin->findChildByPath(path));
+}
 
 class ChartOptions : public WidgetAction
 {
@@ -118,7 +121,7 @@ public:
         ChartOptions& _chartOptions;
         StringAction                _treeLeafSelectionValue;
         DatasetPickerAction                _leafDatasetPicker;
-        OptionsAction                        _selectedLeafValues;
+        OptionsAction                        _selectedLeafValues;                        
 
     };
 
@@ -154,14 +157,16 @@ public:
         TriggerAction& getRevertButtonAction() { return _revertButton; }
 
 
+        const OptionAction& getReverseSearchTraitSelection() const { return _reverseSearchTraitSelection; }
+        OptionAction& getReverseSearchTraitSelection() { return _reverseSearchTraitSelection; }
 
 
 
     protected:
-        ChartOptions& _chartOptions;
+        ChartOptions&                   _chartOptions;
         TriggerAction                   _updateViewsButton;
         TriggerAction                   _revertButton;
-
+        OptionAction                    _reverseSearchTraitSelection;
     };
 
 
