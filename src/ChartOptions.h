@@ -38,6 +38,7 @@
 #include <actions/VerticalToolbarAction.h>
 using namespace mv::gui;
 class QMenu;
+class QTimer;
 class XSCPhyTVuPlugin;
 namespace mv
 {
@@ -184,6 +185,9 @@ private:
     //void createJsonStringCluster();
     std::string extractFormatData(QString datasetValue);
     void traitDatasetModify();
+    void syncReverseSearchTraitSelection();
+    void scheduleSpeciesSelectionSync();
+    void syncSpeciesSelectionToGeneDetect();
    
 public: // Action getters
     ExtraSettingsHolder& getExtraSettingsHolder() { return _extraSettingsHolder; }
@@ -212,6 +216,7 @@ public: // Serialization
 
 protected:
     XSCPhyTVuPlugin& _viewerPlugin;
+    QTimer* _speciesSelectionSyncTimer = nullptr;
     mv::CoreInterface* _core;
     ExtraSettingsHolder              _extraSettingsHolder;
     MetaDataSettingsHolder              _metaDataSettingsHolder;

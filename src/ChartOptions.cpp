@@ -14,6 +14,8 @@
 #include <QJsonArray>
 #include <QStringList>
 #include <QSet>
+#include <QTimer>
+#include <QSignalBlocker>
 #include <QJsonValue>
 using namespace mv;
 using namespace mv::gui;
@@ -39,6 +41,11 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     _updateSettingsHolder(*this)
 
 {
+    _speciesSelectionSyncTimer = new QTimer(this);
+    _speciesSelectionSyncTimer->setSingleShot(true);
+    _speciesSelectionSyncTimer->setInterval(200);
+    connect(_speciesSelectionSyncTimer, &QTimer::timeout, this, &ChartOptions::syncSpeciesSelectionToGeneDetect);
+
     setSerializationName("CSCPTV:CrossSpecies Comparison Phylo Tree View Settings");
     _mainSettingsHolder.getMainReferenceTreeSelectionAction().setSerializationName("CSCPTV:Reference tree selection");
     _extraSettingsHolder.getColorMapAction().setSerializationName("CSCPTV:Color map selection");
@@ -155,7 +162,17 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
                 }
             }
-            _linkerSettingsHolder.getSelectedLeafValues().setOptions(clusterValues);
+            auto& selectedLeaves = _linkerSettingsHolder.getSelectedLeafValues();
+            const QStringList previousSelection = selectedLeaves.getSelectedOptions();
+            {
+                const QSignalBlocker blocker(&selectedLeaves);
+                selectedLeaves.setOptions(clusterValues);
+                QStringList restoredSelection;
+                for (const auto& name : previousSelection)
+                    if (clusterValues.contains(name)) restoredSelection << name;
+                selectedLeaves.setSelectedOptions(restoredSelection);
+            }
+            scheduleSpeciesSelectionSync();
         };
     connect(&_linkerSettingsHolder.getLeafDatasetPicker(), &DatasetPickerAction::currentIndexChanged, this, leafDatasetSelection);
 
@@ -206,6 +223,7 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
             _updateSettingsHolder.getRevertButtonAction().setDisabled(false);
             QString selectionString = _linkerSettingsHolder.getSelectedLeafValues().getSelectedOptions().join(" @%$,$%@ ");
             _viewerPlugin.getChartWidget().setLeafSelectionOneWayFromQT(selectionString);
+            scheduleSpeciesSelectionSync();
 
 
         };
@@ -220,27 +238,8 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
 
     connect(&_updateSettingsHolder.getReverseSearchTraitSelection(), &OptionAction::currentIndexChanged, this, [this]() {
-        QString selectedOption = _updateSettingsHolder.getReverseSearchTraitSelection().getCurrentText();
-
-        auto scatterplotViewFactory = mv::plugins().getPluginFactory("XSCGeneDetect");
-        if (scatterplotViewFactory) {
-            for (auto plugin : mv::plugins().getPluginsByFactory(scatterplotViewFactory)) {
-                if (plugin->getGuiName() == "Gene Identification View") {
-                    mv::gui::StringAction* traitStringAction = findActionByPath<StringAction>(plugin, "XSCGeneDetectPlugin Settings/Reverse Search Trait Selection String");
-                    if (traitStringAction) {
-                        traitStringAction->setString(selectedOption);
-                    }
-                    else {
-                        qWarning() << "Trait String Action not found in Gene Identification View";
-                    }
-                }
-                else {
-                    qWarning() << "Gene Identification View not found";
-                }
-
-            }
-        }
-        });
+        syncReverseSearchTraitSelection();
+    });
 
 
 
@@ -759,6 +758,7 @@ void ChartOptions::traitDatasetModify()
                     auto traitSelectedColor = _metaDataSettingsHolder.getColorTraitAction().getCurrentText();
                     auto traitSelectedNumeric = _metaDataSettingsHolder.getNumericTraitAction().getCurrentText();
                     auto traitSelectedString = _metaDataSettingsHolder.getStringTraitAction().getCurrentText();
+                    auto reverseSearchTrait = _updateSettingsHolder.getReverseSearchTraitSelection().getCurrentText();
 
                     _metaDataSettingsHolder.getStringTraitAction().setOptions(propertyOptionsString);
                     _metaDataSettingsHolder.getColorTraitAction().setOptions(propertyOptionsColor);
@@ -785,6 +785,10 @@ void ChartOptions::traitDatasetModify()
                             _metaDataSettingsHolder.getNumericTraitAction().setCurrentText(traitSelectedNumeric);
                         }
                     }
+                    if (reverseSearchTrait != "" && propertyOptionsNumeric.contains(reverseSearchTrait))
+                    {
+                        _updateSettingsHolder.getReverseSearchTraitSelection().setCurrentText(reverseSearchTrait);
+                    }
 
                 }
 
@@ -808,6 +812,54 @@ void ChartOptions::traitDatasetModify()
     {
         qDebug()<<"Meta Data Dataset not valid";
         }
+    syncReverseSearchTraitSelection();
+}
+
+void ChartOptions::syncReverseSearchTraitSelection()
+{
+    const QString selectedTrait = _updateSettingsHolder.getReverseSearchTraitSelection().getCurrentText();
+    auto factory = mv::plugins().getPluginFactory("XSCGeneDetect");
+    if (!factory)
+        return;
+
+    for (auto* plugin : mv::plugins().getPluginsByFactory(factory)) {
+        if (plugin->getGuiName() != "Gene Identification View")
+            continue;
+        auto* traitAction = findActionByPath<StringAction>(plugin, "XSCGeneDetectPlugin Settings/Reverse Search Trait Selection String");
+        if (traitAction && traitAction->getString() != selectedTrait)
+            traitAction->setString(selectedTrait);
+        return;
+    }
+}
+
+void ChartOptions::syncSpeciesSelectionToGeneDetect()
+{
+    const QString selectedSpecies = _linkerSettingsHolder.getSelectedLeafValues().getSelectedOptions().join(" @%$,$%@ ");
+    auto factory = mv::plugins().getPluginFactory("XSCGeneDetect");
+    if (!factory)
+        return;
+
+    for (auto* plugin : mv::plugins().getPluginsByFactory(factory)) {
+        if (plugin->getGuiName() != "Gene Identification View")
+            continue;
+        auto* speciesAction = findActionByPath<StringAction>(plugin, "XSCGeneDetectPlugin Settings/Selected Species Vals");
+        if (speciesAction && speciesAction->getString() != selectedSpecies) {
+            speciesAction->setString(selectedSpecies);
+
+            // Updating the linked species list only changes the GeneDetect selection model.
+            // Follow its normal action path so both selection and deselection refresh the plot.
+            const auto actionName = selectedSpecies.isEmpty() ? QStringLiteral("DeSelect") : QStringLiteral("Explore");
+            if (auto* selectionAction = findActionByPath<TriggerAction>(plugin, "XSCGeneDetectPlugin Settings/" + actionName))
+                selectionAction->trigger();
+        }
+        return;
+    }
+}
+
+void ChartOptions::scheduleSpeciesSelectionSync()
+{
+    if (_speciesSelectionSyncTimer)
+        _speciesSelectionSyncTimer->start();
 }
 
 void ChartOptions::onDataEventTree(mv::DatasetEvent* dataEvent)
@@ -827,6 +879,10 @@ void ChartOptions::initLoader()
 
     if (!_viewerPlugin.getInitialLoadCompleteflag())
     {
+        // Saved trait names are restored before dataset options are populated. Refresh the
+        // trait choices now so first-run initialization uses the saved values against the
+        // loaded metadata dataset instead of leaving the chart with its default trait.
+        traitDatasetModify();
         
         //_viewerPlugin.getChartWidget().setTreeColorMap(QString::fromStdString("Magma*%*F"));
         /*
@@ -1017,7 +1073,9 @@ inline ChartOptions::UpdateSettingsHolder::UpdateSettingsHolder(ChartOptions& ch
     setText("Update Options");
     setIcon(mv::util::StyledIcon("sync"));
     setPopupSizeHint(QSize(350, 0));
-    addAction(&_updateViewsButton);
+    // Species changes refresh GeneDetect automatically after a short debounce.
+    // Keep the action registered for old project state, but remove the redundant UI button.
+    _updateViewsButton.setVisible(false);
     addAction(&_revertButton);
     addAction(&_reverseSearchTraitSelection);
 
