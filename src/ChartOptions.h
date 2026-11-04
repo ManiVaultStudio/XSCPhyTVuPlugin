@@ -185,6 +185,7 @@ private:
     //void createJsonStringCluster();
     std::string extractFormatData(QString datasetValue);
     void traitDatasetModify();
+    void initializeTraitDataset();
     void syncReverseSearchTraitSelection();
     void scheduleSpeciesSelectionSync();
     void syncSpeciesSelectionToGeneDetect();

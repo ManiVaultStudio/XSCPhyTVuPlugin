@@ -53,6 +53,7 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     // created later.
     const auto syncLinkedGeneDetectState = [this]() {
         QTimer::singleShot(0, this, [this]() {
+            initializeTraitDataset();
             syncReverseSearchTraitSelection();
             syncSpeciesSelectionToGeneDetect();
         });
@@ -435,6 +436,9 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
         };
     connect(&_mainSettingsHolder.getMainReferenceTreeSelectionAction(), &DatasetPickerAction::currentIndexChanged, this, referenceTreeSelection);
+    connect(&_mainSettingsHolder.getMainReferenceTreeSelectionAction(), &DatasetPickerAction::currentIndexChanged, this, [this]() {
+        QTimer::singleShot(0, this, [this]() { initializeTraitDataset(); });
+    });
 
 
     const auto traitSelectionColor = [this]() -> void
@@ -769,6 +773,30 @@ void ChartOptions::disableTraitOptions()
 
 }
 
+void ChartOptions::initializeTraitDataset()
+{
+    // Wait until saved picker choices have been restored before choosing a default.
+    if (mv::projects().isOpeningProject())
+        return;
+
+    auto& picker = _metaDataSettingsHolder.getTraitDatasetSelectionAction();
+    if (!picker.getCurrentDataset().isValid())
+    {
+        for (const auto& dataset : mv::data().getAllDatasets({ XSCTreeMetaType }))
+        {
+            Dataset<XSCTreeMeta> metadata = dataset;
+            if (metadata.isValid() && !metadata->getTreeMetaData().isEmpty())
+            {
+                picker.setCurrentDataset(metadata);
+                break;
+            }
+        }
+    }
+    // The picker may have been restored before its dataset's payload arrived.
+    // Refresh even when the selected dataset itself did not change.
+    traitDatasetModify();
+}
+
 void ChartOptions::traitDatasetModify()
 {
     if (_metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentDataset().isValid() && _metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentText() != "")
@@ -921,11 +949,13 @@ void ChartOptions::onDataEventTree(mv::DatasetEvent* dataEvent)
 {
 
 
+    QTimer::singleShot(0, this, [this]() { initializeTraitDataset(); });
     changeLoader();
 }
 
 void ChartOptions::onDataEventTreeMeta(mv::DatasetEvent* dataEvent)
 {
+    QTimer::singleShot(0, this, [this]() { initializeTraitDataset(); });
     changeLoader();
 
 }
@@ -937,7 +967,7 @@ void ChartOptions::initLoader()
         // Saved trait names are restored before dataset options are populated. Refresh the
         // trait choices now so first-run initialization uses the saved values against the
         // loaded metadata dataset instead of leaving the chart with its default trait.
-        traitDatasetModify();
+        initializeTraitDataset();
         
         //_viewerPlugin.getChartWidget().setTreeColorMap(QString::fromStdString("Magma*%*F"));
         /*
