@@ -1,5 +1,7 @@
 ﻿#include "ChartOptions.h"
 
+#include <AbstractPluginManager.h>
+#include <AbstractProjectManager.h>
 #include <iostream>
 #include <set>
 #include "XSCPhyTVuPlugin.h"
@@ -46,6 +48,23 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     _speciesSelectionSyncTimer->setInterval(200);
     connect(_speciesSelectionSyncTimer, &QTimer::timeout, this, &ChartOptions::syncSpeciesSelectionToGeneDetect);
 
+    // Project restoration can load GeneDetect's empty string after PhyTVu has already
+    // restored its trait option. Sync after restoration, and when the linked view is
+    // created later.
+    const auto syncLinkedGeneDetectState = [this]() {
+        QTimer::singleShot(0, this, [this]() {
+            syncReverseSearchTraitSelection();
+            syncSpeciesSelectionToGeneDetect();
+        });
+    };
+    connect(&mv::projects(), &AbstractProjectManager::projectOpened, this,
+        [syncLinkedGeneDetectState](const mv::Project&) { syncLinkedGeneDetectState(); });
+    connect(&mv::plugins(), &AbstractPluginManager::pluginAdded, this,
+        [syncLinkedGeneDetectState](mv::plugin::Plugin* plugin) {
+            if (plugin && plugin->getGuiName() == QStringLiteral("Gene Identification View"))
+                syncLinkedGeneDetectState();
+        });
+
     setSerializationName("CSCPTV:CrossSpecies Comparison Phylo Tree View Settings");
     _mainSettingsHolder.getMainReferenceTreeSelectionAction().setSerializationName("CSCPTV:Reference tree selection");
     _extraSettingsHolder.getColorMapAction().setSerializationName("CSCPTV:Color map selection");
@@ -86,6 +105,10 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
 
     _mainSettingsHolder.getMainReferenceTreeSelectionAction().setDefaultWidgetFlags(OptionAction::ComboBox);
+    _mainSettingsHolder.getMainReferenceTreeSelectionAction().setToolTip(
+        "Choose the species tree to display. The metadata tree must contain the same species.");
+    _extraSettingsHolder.getColorMapAction().setToolTip(
+        "Choose the colour scale used for numeric trait values on the tree.");
 
 
     _extraSettingsHolder.getColorMapAction().getSettingsAction().getColorMapAction().getDiscretizeAction().setDisabled(true);
@@ -100,18 +123,32 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
     _metaDataSettingsHolder.getColorTraitAction().setDefaultWidgetFlags(OptionAction::ComboBox);
     _metaDataSettingsHolder.getColorTraitAction().initialize(QStringList({  }));
+    _metaDataSettingsHolder.getColorTraitAction().setToolTip(
+        "Choose a categorical metadata field to colour the tree's species.");
     _metaDataSettingsHolder.getNumericTraitAction().setDefaultWidgetFlags(OptionAction::ComboBox);
     _metaDataSettingsHolder.getNumericTraitAction().initialize(QStringList({  }));
+    _metaDataSettingsHolder.getNumericTraitAction().setToolTip(
+        "Choose the numeric trait shown on the tree. This is also the default trait sent to GeneDetect.");
     _metaDataSettingsHolder.getStringTraitAction().setDefaultWidgetFlags(OptionAction::ComboBox);
     _metaDataSettingsHolder.getStringTraitAction().initialize(QStringList({  }));
+    _metaDataSettingsHolder.getStringTraitAction().setToolTip(
+        "Choose a text metadata field to show beside each species.");
+    _metaDataSettingsHolder.getTraitDatasetSelectionAction().setToolTip(
+        "Choose metadata for the species in the reference tree. Species names must match.");
 
     _linkerSettingsHolder.getSelectedLeafValues().setDefaultWidgetFlags(OptionsAction::ComboBox);
     _linkerSettingsHolder.getSelectedLeafValues().initialize(QStringList({  }));
+    _linkerSettingsHolder.getSelectedLeafValues().setToolTip(
+        "Choose species in the tree. Their selection is linked to GeneDetect after a short pause.");
     _linkerSettingsHolder.getLeafDatasetPicker().setDefaultWidgetFlags(OptionAction::ComboBox);
     _linkerSettingsHolder.getLeafDatasetPicker().initialize(QStringList({  }));
+    _linkerSettingsHolder.getLeafDatasetPicker().setToolTip(
+        "Choose the cluster dataset that supplies the species list.");
 
     _metaDataSettingsHolder.getDisableTraitOptions().setDefaultWidgetFlags(ToggleAction::CheckBox);
     _metaDataSettingsHolder.getDisableTraitOptions().setChecked(false);
+    _metaDataSettingsHolder.getDisableTraitOptions().setToolTip(
+        "Hide trait overlays while keeping the selected metadata available.");
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().setString("");
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().setDefaultWidgetFlags(StringAction::LineEdit);
 
@@ -126,6 +163,10 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     _extraSettingsHolder.getExportTreeDataAction().setDefaultWidgetFlags(TriggerAction::IconText);
     _extraSettingsHolder.getExportTreeDataAction().setIcon(mv::util::StyledIcon("save"));
     _updateSettingsHolder.getReverseSearchTraitSelection().setDefaultWidgetFlags(OptionAction::ComboBox);
+    _updateSettingsHolder.getRevertButtonAction().setToolTip(
+        "Restore the tree's original species ordering and display state.");
+    _updateSettingsHolder.getReverseSearchTraitSelection().setToolTip(
+        "Trait used by GeneDetect for its trait-correlation column. A saved choice is kept; otherwise the numeric tree trait is used.");
 
 
     QIcon exploreIcon = mv::util::StyledIcon("wpexplorer");
@@ -593,7 +634,9 @@ std::string ChartOptions::extractFormatData(QString datasetValue)
 
     Dataset<XSCTree> dataset = mv::data().getDataset<XSCTree>(datasetValue);
     auto temp = dataset->getTreeData();
-    std::string valueStringReference = QJsonDocument(temp).toJson().toStdString();
+    // WebView payloads can be large: compact JSON preserves the tree exactly while
+    // avoiding the extra whitespace and parse work from the default indented format.
+    std::string valueStringReference = QJsonDocument(temp).toJson(QJsonDocument::Compact).toStdString();
 
     return valueStringReference;
 
@@ -789,6 +832,16 @@ void ChartOptions::traitDatasetModify()
                     {
                         _updateSettingsHolder.getReverseSearchTraitSelection().setCurrentText(reverseSearchTrait);
                     }
+                    else {
+                        // Older projects may have a selected numeric chart trait but no
+                        // saved GeneDetect reverse-search trait. Use that selected trait
+                        // as the default, then fall back to the first numeric trait.
+                        const QString defaultTrait = propertyOptionsNumeric.contains(traitSelectedNumeric)
+                            ? traitSelectedNumeric
+                            : (propertyOptionsNumeric.isEmpty() ? QString() : propertyOptionsNumeric.first());
+                        if (!defaultTrait.isEmpty())
+                            _updateSettingsHolder.getReverseSearchTraitSelection().setCurrentText(defaultTrait);
+                    }
 
                 }
 
@@ -817,7 +870,9 @@ void ChartOptions::traitDatasetModify()
 
 void ChartOptions::syncReverseSearchTraitSelection()
 {
-    const QString selectedTrait = _updateSettingsHolder.getReverseSearchTraitSelection().getCurrentText();
+    QString selectedTrait = _updateSettingsHolder.getReverseSearchTraitSelection().getCurrentText();
+    if (selectedTrait.isEmpty())
+        selectedTrait = _metaDataSettingsHolder.getNumericTraitAction().getCurrentText();
     auto factory = mv::plugins().getPluginFactory("XSCGeneDetect");
     if (!factory)
         return;
