@@ -59,6 +59,7 @@ class ChartWidget : public mv::gui::WebWidget
 public:
     ChartWidget();
     ~ChartWidget() override;
+    void shutdown();
 
     void addDataOption(const QString option);
     void setData(QString visDataContent);

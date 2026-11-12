@@ -210,7 +210,6 @@ void XSCPhyTVuPlugin::init()
             if (_referenceTree.isValid()) { comparisonDatasetDimensions = _referenceTree->getTreeLeafNames(); }
             if (_referenceTree.isValid())
             {
-                /* TODO: MEtadata */
                 if (leaves.size() > 0 && comparisonDatasetDimensions.size() > 0)
                 {
                     leaves.sort();

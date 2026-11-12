@@ -801,7 +801,9 @@ void ChartOptions::traitDatasetModify()
 {
     if (_metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentDataset().isValid() && _metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentText() != "")
     {
-        Dataset<XSCTreeMeta> metaDataDataset = mv::data().getDataset<XSCTreeMeta>(_metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentDataset()->getId());
+        auto metaDataDataset = _metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentDataset<XSCTreeMeta>();
+        if (!metaDataDataset.isValid())
+            return;
 
         QStringList metaDataLeafNames = metaDataDataset->getTreeMetaLeafNames();
         if (metaDataLeafNames.size() > 0)
@@ -809,7 +811,10 @@ void ChartOptions::traitDatasetModify()
 
     if ( _mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentText() != "" &&  _mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentDataset().isValid())
     {
-        QStringList referenceTreeLeafNames = mv::data().getDataset<XSCTree>(_mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentDataset()->getId())->getTreeLeafNames();
+        auto referenceTree = _mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentDataset<XSCTree>();
+        if (!referenceTree.isValid())
+            return;
+        QStringList referenceTreeLeafNames = referenceTree->getTreeLeafNames();
        
         if (areStringListsEqual(referenceTreeLeafNames, metaDataLeafNames))
         {

@@ -1,4 +1,4 @@
-﻿window.onresize = doALoadOfStuff;
+window.onresize = doALoadOfStuff;
 var treeData = "";
 var qtColor = "Magma";
 var m_aAverageScore = undefined;
@@ -192,7 +192,7 @@ function sumMeanValues(node) {
 
     // If the current node has its own mean, add it to the score and ensure the result is rounded to 2 decimal places
     if (node.mean) {
-        node.score += parseFloat(node.mean.toFixed(2));
+        node.score += parseFloat((Number.isFinite(node.mean) ? node.mean : 0).toFixed(2));
         node.score = parseFloat(node.score.toFixed(2)); // Round again after addition to ensure 2 decimal places
     }
 
@@ -201,8 +201,8 @@ function sumMeanValues(node) {
 function averageMeanValuesAllLeafChildren(node) {
     if (!node.children || node.children.length === 0) {
         // Leaf node
-        node.score = parseFloat(node.mean.toFixed(2));
-        return { totalMean: node.mean, count: 1 };
+        node.score = parseFloat((Number.isFinite(node.mean) ? node.mean : 0).toFixed(2));
+        return { totalMean: node.score, count: 1 };
     } else {
         // Non-leaf node
         let totalMean = 0;
@@ -219,8 +219,8 @@ function averageMeanValuesAllLeafChildren(node) {
 function averageDifferentialValuesAllLeafChildren(node) {
     if (!node.children || node.children.length === 0) {
         // Leaf node
-        node.score = parseFloat(node.differential.toFixed(2));
-        return { totalMean: node.differential, count: 1 };
+        node.score = parseFloat((Number.isFinite(node.differential) ? node.differential : 0).toFixed(2));
+        return { totalMean: node.score, count: 1 };
     } else {
         // Non-leaf node
         let totalMean = 0;
@@ -238,8 +238,8 @@ function averageDifferentialValuesAllLeafChildren(node) {
 function averageAbundanceTopValuesAllLeafChildren(node) {
     if (!node.children || node.children.length === 0) {
         // Leaf node
-        node.score = parseFloat(node.abundanceTop.toFixed(2));
-        return { totalMean: node.abundanceTop, count: 1 };
+        node.score = parseFloat((Number.isFinite(node.abundanceTop) ? node.abundanceTop : 0).toFixed(2));
+        return { totalMean: node.score, count: 1 };
     } else {
         // Non-leaf node
         let totalMean = 0;
@@ -257,8 +257,8 @@ function averageAbundanceTopValuesAllLeafChildren(node) {
 function averageAbundanceMiddleValuesAllLeafChildren(node) {
     if (!node.children || node.children.length === 0) {
         // Leaf node
-        node.score = parseFloat(node.abundanceMiddle.toFixed(2));
-        return { totalMean: node.abundanceMiddle, count: 1 };
+        node.score = parseFloat((Number.isFinite(node.abundanceMiddle) ? node.abundanceMiddle : 0).toFixed(2));
+        return { totalMean: node.score, count: 1 };
     } else {
         // Non-leaf node
         let totalMean = 0;
@@ -310,7 +310,7 @@ function averageMeanValues(node) {
 
     // If the current node has its own mean, include it in the average calculation
     if (node.mean) {
-        sum += parseFloat(node.mean.toFixed(2));
+        sum += parseFloat((Number.isFinite(node.mean) ? node.mean : 0).toFixed(2));
         count++; // Include the current node in the count if it has a mean
     }
 
@@ -437,9 +437,18 @@ function initiateChart(d) {
         minBranchLength = findMinBranchLength(dataVariableReference);
         maxTotalDepthWidth = findMaxPathTotalDepthLength(dataVariableReference);
         dataReference = copyDataWithCollapsedFlag(dataVariableReference);
-        geneName = dataVariableReference.children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].gene;
-        middleAbundanceClusterName = dataVariableReference.children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].middleAbundanceClusterName;
-        clusterName = dataVariableReference.children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].clusterName;
+        const findAnnotation = (node, key) => {
+            if (typeof node[key] === "string" && node[key] !== "")
+                return node[key];
+            for (const child of node.children || []) {
+                const value = findAnnotation(child, key);
+                if (value !== "") return value;
+            }
+            return "";
+        };
+        geneName = findAnnotation(dataVariableReference, "gene");
+        middleAbundanceClusterName = findAnnotation(dataVariableReference, "middleAbundanceClusterName");
+        clusterName = findAnnotation(dataVariableReference, "clusterName");
         //middleAbundanceClusterName = middleAbundanceClusterName.toLowerCase();
         //clusterName = clusterName.toLowerCase();
         //middleAbundanceClusterName = middleAbundanceClusterName.toLowerCase();

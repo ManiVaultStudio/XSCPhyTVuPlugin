@@ -6,6 +6,10 @@
 #include <QVBoxLayout>
 #include <chrono>
 #include <cassert>
+#include <QWebEnginePage>
+#include <QWebEngineView>
+#include <Application.h>
+#include <CoreInterface.h>
 
 ChartCommunicationObject::ChartCommunicationObject(ChartWidget* parent)
     :
@@ -75,13 +79,22 @@ ChartWidget::ChartWidget() :
 {
     Q_INIT_RESOURCE(XSCPhyTVu_chart);
     _communicationObject = new ChartCommunicationObject(this);
+    _communicationObject->setParent(this);
     init(_communicationObject);
+    connect(mv::Application::core(), &mv::CoreInterface::aboutToBeDestroyed, this, &ChartWidget::shutdown);
     setMinimumHeight(140);
 }
 
 ChartWidget::~ChartWidget()
 {
+    shutdown();
+}
 
+void ChartWidget::shutdown()
+{
+    getView()->stop();
+    getPage()->setWebChannel(nullptr);
+    disconnect(_communicationObject, nullptr, nullptr, nullptr);
 }
 
 void ChartWidget::setData(QString visDataContent)
