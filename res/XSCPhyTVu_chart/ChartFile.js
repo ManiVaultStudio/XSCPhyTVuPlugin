@@ -1468,12 +1468,12 @@ L ${d.y} ${d.x}`;
       
                   if (typeOfColoringScore == "rank") {
                       averageRankValuesAllLeafChildren(dataReference);
-                      tooltipTextVal = "Appearance rank for " + geneName + " in " + clusterName;
+                      tooltipTextVal = geneName + " rank · " + clusterName;
                       qtColor = "Greys";
                   }
                   else if (typeOfColoringScore == "differential expression") {
                       averageDifferentialValuesAllLeafChildren(dataReference);
-                      tooltipTextVal = "Mean differential expression for " + geneName + " in " + clusterName;
+                      tooltipTextVal = geneName + " expression difference · " + clusterName;
                       qtColor = "Plasma"; //Magma
                   }
                   else if (typeOfColoringScore == "abundanceTop") {
