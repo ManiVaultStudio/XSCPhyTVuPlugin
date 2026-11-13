@@ -1,3 +1,4 @@
+#include "QtTooltipKit.h"
 #include "ChartOptions.h"
 
 #include <AbstractPluginManager.h>
@@ -106,10 +107,9 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
 
     _mainSettingsHolder.getMainReferenceTreeSelectionAction().setDefaultWidgetFlags(OptionAction::ComboBox);
-    _mainSettingsHolder.getMainReferenceTreeSelectionAction().setToolTip(
-        "Choose the species tree to display. The metadata tree must contain the same species.");
-    _extraSettingsHolder.getColorMapAction().setToolTip(
-        "Choose the colour scale used for numeric trait values on the tree.");
+    _mainSettingsHolder.getMainReferenceTreeSelectionAction().setIconByName("project-diagram");
+    qttooltipkit::set(_mainSettingsHolder.getMainReferenceTreeSelectionAction(), tr("Reference tree"), tr("Choose the phylogeny to display. Its leaf names identify the species used to match metadata and linked selections."));
+    qttooltipkit::set(_extraSettingsHolder.getColorMapAction(), _extraSettingsHolder.getColorMapAction().text(), tr("Choose the colour scale used for numeric trait values on the tree."));
 
 
     _extraSettingsHolder.getColorMapAction().getSettingsAction().getColorMapAction().getDiscretizeAction().setDisabled(true);
@@ -124,32 +124,25 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
 
     _metaDataSettingsHolder.getColorTraitAction().setDefaultWidgetFlags(OptionAction::ComboBox);
     _metaDataSettingsHolder.getColorTraitAction().initialize(QStringList({  }));
-    _metaDataSettingsHolder.getColorTraitAction().setToolTip(
-        "Choose a categorical metadata field to colour the tree's species.");
+    qttooltipkit::set(_metaDataSettingsHolder.getColorTraitAction(), _metaDataSettingsHolder.getColorTraitAction().text(), tr("Choose a categorical metadata field to colour the tree's species."));
     _metaDataSettingsHolder.getNumericTraitAction().setDefaultWidgetFlags(OptionAction::ComboBox);
     _metaDataSettingsHolder.getNumericTraitAction().initialize(QStringList({  }));
-    _metaDataSettingsHolder.getNumericTraitAction().setToolTip(
-        "Choose the numeric trait shown on the tree. This is also the default trait sent to GeneDetect.");
+    qttooltipkit::set(_metaDataSettingsHolder.getNumericTraitAction(), _metaDataSettingsHolder.getNumericTraitAction().text(), tr("Choose the numeric trait shown on the tree. This is also the default trait sent to GeneDetect."));
     _metaDataSettingsHolder.getStringTraitAction().setDefaultWidgetFlags(OptionAction::ComboBox);
     _metaDataSettingsHolder.getStringTraitAction().initialize(QStringList({  }));
-    _metaDataSettingsHolder.getStringTraitAction().setToolTip(
-        "Choose a text metadata field to show beside each species.");
-    _metaDataSettingsHolder.getTraitDatasetSelectionAction().setToolTip(
-        "Choose metadata for the species in the reference tree. Species names must match.");
+    qttooltipkit::set(_metaDataSettingsHolder.getStringTraitAction(), _metaDataSettingsHolder.getStringTraitAction().text(), tr("Choose a text metadata field to show beside each species."));
+    qttooltipkit::set(_metaDataSettingsHolder.getTraitDatasetSelectionAction(), _metaDataSettingsHolder.getTraitDatasetSelectionAction().text(), tr("Choose metadata for the species in the reference tree. Species names must match."));
 
     _linkerSettingsHolder.getSelectedLeafValues().setDefaultWidgetFlags(OptionsAction::ComboBox);
     _linkerSettingsHolder.getSelectedLeafValues().initialize(QStringList({  }));
-    _linkerSettingsHolder.getSelectedLeafValues().setToolTip(
-        "Choose species in the tree. Their selection is linked to GeneDetect after a short pause.");
+    qttooltipkit::set(_linkerSettingsHolder.getSelectedLeafValues(), _linkerSettingsHolder.getSelectedLeafValues().text(), tr("Choose species in the tree. Their selection is linked to GeneDetect after a short pause."));
     _linkerSettingsHolder.getLeafDatasetPicker().setDefaultWidgetFlags(OptionAction::ComboBox);
     _linkerSettingsHolder.getLeafDatasetPicker().initialize(QStringList({  }));
-    _linkerSettingsHolder.getLeafDatasetPicker().setToolTip(
-        "Choose the cluster dataset that supplies the species list.");
+    qttooltipkit::set(_linkerSettingsHolder.getLeafDatasetPicker(), _linkerSettingsHolder.getLeafDatasetPicker().text(), tr("Choose the cluster dataset that supplies the species list."));
 
     _metaDataSettingsHolder.getDisableTraitOptions().setDefaultWidgetFlags(ToggleAction::CheckBox);
     _metaDataSettingsHolder.getDisableTraitOptions().setChecked(false);
-    _metaDataSettingsHolder.getDisableTraitOptions().setToolTip(
-        "Hide trait overlays while keeping the selected metadata available.");
+    qttooltipkit::set(_metaDataSettingsHolder.getDisableTraitOptions(), _metaDataSettingsHolder.getDisableTraitOptions().text(), tr("Hide trait overlays while keeping the selected metadata available."));
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().setString("");
     _linkerSettingsHolder.getTreeLeafSelectionValueQT().setDefaultWidgetFlags(StringAction::LineEdit);
 
@@ -164,10 +157,8 @@ ChartOptions::ChartOptions(XSCPhyTVuPlugin& XSCPhyTVuPlugin, mv::CoreInterface* 
     _extraSettingsHolder.getExportTreeDataAction().setDefaultWidgetFlags(TriggerAction::IconText);
     _extraSettingsHolder.getExportTreeDataAction().setIcon(mv::util::StyledIcon("save"));
     _updateSettingsHolder.getReverseSearchTraitSelection().setDefaultWidgetFlags(OptionAction::ComboBox);
-    _updateSettingsHolder.getRevertButtonAction().setToolTip(
-        "Restore the tree's original species ordering and display state.");
-    _updateSettingsHolder.getReverseSearchTraitSelection().setToolTip(
-        "Trait used by GeneDetect for its trait-correlation column. A saved choice is kept; otherwise the numeric tree trait is used.");
+    qttooltipkit::set(_updateSettingsHolder.getRevertButtonAction(), _updateSettingsHolder.getRevertButtonAction().text(), tr("Restore the tree's original species ordering and display state."));
+    qttooltipkit::set(_updateSettingsHolder.getReverseSearchTraitSelection(), _updateSettingsHolder.getReverseSearchTraitSelection().text(), tr("Trait used by GeneDetect for its trait-correlation column. A saved choice is kept; otherwise the numeric tree trait is used."));
 
 
     QIcon exploreIcon = mv::util::StyledIcon("wpexplorer");
