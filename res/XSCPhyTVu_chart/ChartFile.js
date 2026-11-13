@@ -1,4 +1,4 @@
-﻿function updateHastrait(node, traitValue, traitjson) {
+function updateHastrait(node, traitValue, traitjson) {
     if (node.children) {
         node.children.forEach((child) => {
             updateHastrait(child, traitValue, traitjson);
@@ -171,9 +171,9 @@ function generateVis() {
     var sizeScale;
 
     if (traitValueNumericFlag && showTraitValues) {
-        valuesNumeric = Object.values(traitValueNumericContainer);
-        minValNumeric = Math.min(...valuesNumeric);
-        maxValNumeric = Math.max(...valuesNumeric);
+        valuesNumeric = Object.values(traitValueNumericContainer).filter(Number.isFinite);
+        minValNumeric = valuesNumeric.length ? Math.min(...valuesNumeric) : 0;
+        maxValNumeric = valuesNumeric.length ? Math.max(...valuesNumeric) : 0;
         sizeScale = d3
             .scaleLinear()
             .domain([minValNumeric, maxValNumeric])
@@ -210,8 +210,8 @@ function generateVis() {
         bottom: 20,
         left: 50,
     };
-    var width = window.innerWidth - margin.left - margin.right;
-    var height = window.innerHeight - margin.top - margin.bottom;
+    var width = Math.max(0, window.innerWidth - margin.left - margin.right);
+    var height = Math.max(0, window.innerHeight - margin.top - margin.bottom);
     var removeAnimation = true;
     var sizeofShapes = height / 4.5;
     svg = d3
@@ -351,7 +351,7 @@ function generateVis() {
                     }
 
                     if (traitValueNumericFlag && showTraitValues) {
-                        symbol = symbol.size(sizeScale(traitValueNumericContainer[d.data.name]));
+                        symbol = symbol.size((sizeScale(traitValueNumericContainer[d.data.name]) ?? sizeofShapes));
                     } else {
                         symbol = symbol.size(sizeofShapes);
                     }
@@ -891,7 +891,7 @@ L ${d.y} ${d.x}`;
                     )
                     .size((d) =>
                         traitValueNumericFlag && showTraitValues
-                            ? sizeScale(traitValueNumericContainer[d.name])
+                            ? (sizeScale(traitValueNumericContainer[d.name]) ?? 50)
                             : 50
                     )
             )
