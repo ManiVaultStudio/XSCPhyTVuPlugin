@@ -1,4 +1,4 @@
-﻿#include "ChartOptions.h"
+#include "ChartOptions.h"
 
 #include <AbstractPluginManager.h>
 #include <AbstractProjectManager.h>
@@ -1176,10 +1176,18 @@ void ChartOptions::fromVariantMap(const QVariantMap& variantMap)
     WidgetAction::fromVariantMap(variantMap);
 
     _extraSettingsHolder.getColorMapAction().fromParentVariantMap(variantMap);
-    _mainSettingsHolder.getMainReferenceTreeSelectionAction().fromParentVariantMap(variantMap);
-    _linkerSettingsHolder.getLeafDatasetPicker().fromParentVariantMap(variantMap);
+    const auto restoreDataset = [&variantMap](mv::gui::DatasetPickerAction& picker) {
+        const auto saved = variantMap.value(picker.getSerializationName()).toMap();
+        if (saved.isEmpty())
+            return;
+        // A dataset picker saves an ID, so skip the generic option-text restore.
+        picker.mv::gui::WidgetAction::fromVariantMap(saved);
+        picker.setCurrentDataset(saved.value(QStringLiteral("Value")).toString());
+    };
+    restoreDataset(_mainSettingsHolder.getMainReferenceTreeSelectionAction());
+    restoreDataset(_linkerSettingsHolder.getLeafDatasetPicker());
     _linkerSettingsHolder.getSelectedLeafValues().fromParentVariantMap(variantMap);
-    _metaDataSettingsHolder.getTraitDatasetSelectionAction().fromParentVariantMap(variantMap);
+    restoreDataset(_metaDataSettingsHolder.getTraitDatasetSelectionAction());
     _metaDataSettingsHolder.getColorTraitAction().fromParentVariantMap(variantMap);
     _metaDataSettingsHolder.getNumericTraitAction().fromParentVariantMap(variantMap);
     _metaDataSettingsHolder.getStringTraitAction().fromParentVariantMap(variantMap);
