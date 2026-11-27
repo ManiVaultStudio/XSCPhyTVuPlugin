@@ -793,8 +793,10 @@ void ChartOptions::traitDatasetModify()
     if (_metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentDataset().isValid() && _metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentText() != "")
     {
         auto metaDataDataset = _metaDataSettingsHolder.getTraitDatasetSelectionAction().getCurrentDataset<XSCTreeMeta>();
-        if (!metaDataDataset.isValid())
+        if (!metaDataDataset.isValid()) {
+            syncReverseSearchTraitSelection();
             return;
+        }
 
         QStringList metaDataLeafNames = metaDataDataset->getTreeMetaLeafNames();
         if (metaDataLeafNames.size() > 0)
@@ -803,8 +805,10 @@ void ChartOptions::traitDatasetModify()
     if ( _mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentText() != "" &&  _mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentDataset().isValid())
     {
         auto referenceTree = _mainSettingsHolder.getMainReferenceTreeSelectionAction().getCurrentDataset<XSCTree>();
-        if (!referenceTree.isValid())
+        if (!referenceTree.isValid()) {
+            syncReverseSearchTraitSelection();
             return;
+        }
         QStringList referenceTreeLeafNames = referenceTree->getTreeLeafNames();
        
         if (areStringListsEqual(referenceTreeLeafNames, metaDataLeafNames))
@@ -907,6 +911,8 @@ void ChartOptions::syncReverseSearchTraitSelection()
         auto* traitAction = findActionByPath<StringAction>(plugin, "XSCGeneDetectPlugin Settings/Reverse Search Trait Selection String");
         if (traitAction && traitAction->getString() != selectedTrait)
             traitAction->setString(selectedTrait);
+        if (auto* refreshAction = findActionByPath<TriggerAction>(plugin, "XSCGeneDetectPlugin Settings/Refresh Trait Analysis"))
+            refreshAction->trigger();
         return;
     }
 }
